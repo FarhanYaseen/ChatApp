@@ -51,6 +51,35 @@
   margin-top: 1px;
 }
 
+.chat-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.logout-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.online-count-wrapper {
+  position: relative;
+}
+
 .online-count {
   display: flex;
   align-items: center;
@@ -60,6 +89,43 @@
   background: rgba(255, 255, 255, 0.15);
   padding: 0.3rem 0.65rem;
   border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.online-count:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.online-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 0.5rem 0;
+  min-width: 150px;
+  z-index: 100;
+}
+
+.online-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  color: var(--received-text);
+}
+
+.online-list-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4ade80;
+  flex-shrink: 0;
 }
 
 .online-dot {

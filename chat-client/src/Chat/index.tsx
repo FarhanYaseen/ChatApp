@@ -22,26 +22,32 @@ function useDebounce(fn: (text: string) => void, delay: number) {
   }, [fn, delay]);
 }
 
-function Chat() {
+interface ChatProps {
+  token: string;
+  username: string;
+  onLogout: () => void;
+}
+
+function Chat({ token, username, onLogout }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [clientId, setClientId] = useState<string | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [onlineCount, setOnlineCount] = useState(0);
-  const [name, setName] = useState("");
-  const [hasJoined, setHasJoined] = useState(false);
+  const [onlineNames, setOnlineNames] = useState<string[]>([]);
+  const [showOnlineList, setShowOnlineList] = useState(false);
+  const onlineListRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const ws = new WebSocket(WS_URL);
+    const ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token)}`);
     wsRef.current = ws;
 
     ws.onopen = () => {
       setStatus("connected");
-      nameInputRef.current?.focus();
+      inputRef.current?.focus();
     };
 
     ws.onmessage = (event: MessageEvent) => {
@@ -52,6 +58,7 @@ function Chat() {
         setMessages((prev) => [...prev, data as Message]);
       } else if (data.type === "users") {
         setOnlineCount(data.count as number);
+        setOnlineNames(data.names as string[]);
       }
     };
 
@@ -59,19 +66,22 @@ function Chat() {
     ws.onerror = () => setStatus("disconnected");
 
     return () => ws.close();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleJoin = () => {
-    const trimmed = name.trim();
-    if (!trimmed || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    wsRef.current.send(JSON.stringify({ type: "join", name: trimmed }));
-    setHasJoined(true);
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
+  useEffect(() => {
+    if (!showOnlineList) return;
+    const handler = (e: MouseEvent) => {
+      if (onlineListRef.current && !onlineListRef.current.contains(e.target as Node)) {
+        setShowOnlineList(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showOnlineList]);
 
   const sendMessage = useCallback((text: string) => {
     if (!text.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
@@ -83,59 +93,6 @@ function Chat() {
   const debouncedSend = useDebounce(sendMessage, 300);
   const handleSend = () => debouncedSend(input);
 
-  // ── Name entry screen ──────────────────────────────────────────
-  if (!hasJoined) {
-    return (
-      <div className="chat" role="main">
-        <div className="chat-header">
-          <div className="chat-header-left">
-            <div className="chat-avatar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-            </div>
-            <div>
-              <div className="chat-title">ChatApp</div>
-              <div className="chat-subtitle">Real-time messaging</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="join-screen">
-          <div className="join-card">
-            <div className="join-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </div>
-            <h2 className="join-title">What's your name?</h2>
-            <p className="join-subtitle">This is how others will see you in the chat.</p>
-            <input
-              ref={nameInputRef}
-              className="join-input"
-              type="text"
-              placeholder="Enter your name..."
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleJoin()}
-              maxLength={30}
-              autoComplete="off"
-            />
-            <button
-              className="join-btn"
-              onClick={handleJoin}
-              disabled={!name.trim() || status !== "connected"}
-            >
-              {status === "connecting" ? "Connecting..." : "Join Chat"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Chat screen ────────────────────────────────────────────────
   return (
     <div className="chat" role="main">
       <div className="chat-header">
@@ -147,15 +104,40 @@ function Chat() {
           </div>
           <div>
             <div className="chat-title">ChatApp</div>
-            <div className="chat-subtitle">Chatting as <strong>{name}</strong></div>
+            <div className="chat-subtitle">Chatting as <strong>{username}</strong></div>
           </div>
         </div>
-        {status === "connected" && (
-          <span className="online-count" aria-live="polite">
-            <span className="online-dot" />
-            {onlineCount} online
-          </span>
-        )}
+        <div className="chat-header-right">
+          {status === "connected" && (
+            <div className="online-count-wrapper" ref={onlineListRef}>
+              <button
+                className="online-count"
+                onClick={() => setShowOnlineList((v) => !v)}
+                aria-label="Show online users"
+              >
+                <span className="online-dot" />
+                {onlineCount} online
+              </button>
+              {showOnlineList && (
+                <div className="online-list">
+                  {onlineNames.map((name) => (
+                    <div key={name} className="online-list-item">
+                      <span className="online-list-dot" />
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          <button className="logout-btn" onClick={onLogout} aria-label="Sign out" title="Sign out">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className={`chat-status status-${status}`} aria-live="polite">

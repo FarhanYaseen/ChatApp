@@ -1,0 +1,179 @@
+.auth-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 380px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 2.25rem 2rem 2rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.13);
+}
+
+.auth-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--header-from), var(--header-to));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  margin-bottom: 0.75rem;
+}
+
+.auth-app-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--received-text);
+  margin: 0;
+}
+
+.auth-tagline {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0.2rem 0 1.5rem;
+}
+
+/* ── Tabs ── */
+.auth-tabs {
+  display: flex;
+  width: 100%;
+  background: var(--messages-bg);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 1.5rem;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  transition: background 0.15s, color 0.15s;
+}
+
+.auth-tab.active {
+  background: #fff;
+  color: var(--header-from);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ── Form ── */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.auth-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--received-text);
+}
+
+.auth-field input {
+  padding: 0.65rem 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.93rem;
+  font-family: inherit;
+  background: var(--messages-bg);
+  color: var(--received-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.auth-field input:focus {
+  border-color: var(--header-from);
+  background: #fff;
+}
+
+.auth-field input::placeholder {
+  color: #9ca3af;
+}
+
+.auth-field input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Error ── */
+.auth-error {
+  font-size: 0.82rem;
+  color: #dc2626;
+  background: #fee2e2;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+}
+
+/* ── Submit button ── */
+.auth-submit {
+  width: 100%;
+  padding: 0.72rem 1rem;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--header-from), var(--header-to));
+  color: #fff;
+  font-size: 0.93rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 0.25rem;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.auth-submit:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.auth-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Switch link ── */
+.auth-switch {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 1.25rem 0 0;
+}
+
+.auth-switch-btn {
+  background: none;
+  border: none;
+  color: var(--header-from);
+  font-size: inherit;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.auth-switch-btn:hover {
+  text-decoration: underline;
+}
