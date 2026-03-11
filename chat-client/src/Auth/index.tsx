@@ -130,14 +130,6 @@ function Auth({ onAuth }: AuthProps) {
             {mode === "login" ? "Register" : "Sign in"}
           </button>
         </p>
-
-        <div className="auth-demo">
-          <p className="auth-demo-label">Try the demo</p>
-          <div className="auth-demo-creds">
-            <span><strong>user</strong> booker@salesman.com</span>
-            <span><strong>pass</strong> booker@salesman.com</span>
-          </div>
-        </div>
       </div>
     </div>
   );

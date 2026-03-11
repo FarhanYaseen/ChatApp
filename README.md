@@ -14,12 +14,11 @@ A full-stack real-time chat application built with React, TypeScript, Node.js, a
 **URL:** https://chat-app-lilac-iota.vercel.app/
 
 > Open the app in **two different browser tabs or windows** to see real-time messaging in action.
-
 ---
 
 ## Screenshots
 
-> Add screenshots to a `docs/screenshots/` folder and update the paths below.
+> TODO:Add screenshots to a `docs/screenshots/` folder and update the paths below.
 
 | Login Screen | Chat Interface |
 |:---:|:---:|
@@ -29,7 +28,7 @@ A full-stack real-time chat application built with React, TypeScript, Node.js, a
 
 ## Video Demo
 
-> Record a short screen capture showing login → messaging → typing indicator → online presence and embed or link it here.
+> TODO: Record a short screen capture showing login → messaging → typing indicator → online presence and embed or link it here.
 
 [![Watch Demo](https://img.shields.io/badge/Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube)](#)
 
