@@ -128,13 +128,6 @@
   flex-shrink: 0;
 }
 
-.online-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.3);
-}
 
 /* ── Status banner (only shown when not connected) ── */
 .chat-status {

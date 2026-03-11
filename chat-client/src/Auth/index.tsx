@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { MessageSquare } from "lucide-react";
 import "./index.css";
 
 const API_BASE = `${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}/api/auth`;
@@ -57,9 +58,7 @@ function Auth({ onAuth }: AuthProps) {
     <div className="auth-wrapper">
       <div className="auth-card">
         <div className="auth-logo">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
+          <MessageSquare size={28} strokeWidth={2} />
         </div>
 
         <h1 className="auth-app-name">ChatApp</h1>

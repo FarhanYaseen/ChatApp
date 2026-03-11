@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { MessageSquare, LogOut, Send, Users } from "lucide-react";
 import "./index.css";
 
 type Message = {
@@ -134,9 +135,7 @@ function Chat({ token, username, onLogout }: ChatProps) {
       <div className="chat-header">
         <div className="chat-header-left">
           <div className="chat-avatar">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
+            <MessageSquare size={20} strokeWidth={2} />
           </div>
           <div>
             <div className="chat-title">ChatApp</div>
@@ -151,7 +150,7 @@ function Chat({ token, username, onLogout }: ChatProps) {
                 onClick={() => setShowOnlineList((v) => !v)}
                 aria-label="Show online users"
               >
-                <span className="online-dot" />
+                <Users size={13} strokeWidth={2.5} />
                 {onlineCount} online
               </button>
               {showOnlineList && (
@@ -167,11 +166,7 @@ function Chat({ token, username, onLogout }: ChatProps) {
             </div>
           )}
           <button className="logout-btn" onClick={onLogout} aria-label="Sign out" title="Sign out">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
+            <LogOut size={16} strokeWidth={2} />
           </button>
         </div>
       </div>
@@ -190,9 +185,7 @@ function Chat({ token, username, onLogout }: ChatProps) {
       >
         {messages.length === 0 ? (
           <div className="chat-empty">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
+            <MessageSquare size={48} strokeWidth={1.5} />
             <p>No messages yet. Say hello!</p>
           </div>
         ) : (
@@ -238,10 +231,7 @@ function Chat({ token, username, onLogout }: ChatProps) {
           aria-label="Send message"
           disabled={status !== "connected"}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13" />
-            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-          </svg>
+          <Send size={18} strokeWidth={2.2} />
         </button>
       </div>
     </div>
