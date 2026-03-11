@@ -11,7 +11,7 @@ type Message = {
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected";
 
-const WS_URL = "ws://localhost:8080";
+const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:8080";
 
 function useDebounce(fn: (text: string) => void, delay: number) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
