@@ -201,8 +201,8 @@ const wss = new WebSocketServer({
 const clients = new Map<WebSocket, ClientInfo>();
 
 function broadcastUserCount() {
-  const names = Array.from(clients.values()).map((c) => c.name);
-  const payload: UsersPayload = { type: 'users', count: clients.size, names };
+  const names = [...new Set(Array.from(clients.values()).map((c) => c.name))];
+  const payload: UsersPayload = { type: 'users', count: names.length, names };
   const msg = JSON.stringify(payload);
   clients.forEach((_, ws) => {
     if (ws.readyState === WebSocket.OPEN) ws.send(msg);
