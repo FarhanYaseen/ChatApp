@@ -159,6 +159,11 @@
   color: #991b1b;
 }
 
+.chat-status.status-kicked {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 /* ── Messages ── */
 .chat-messages {
   flex: 1;

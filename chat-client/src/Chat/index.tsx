@@ -9,7 +9,7 @@ type Message = {
   senderName: string;
 };
 
-type ConnectionStatus = "connecting" | "connected" | "disconnected";
+type ConnectionStatus = "connecting" | "connected" | "disconnected" | "kicked";
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:8080";
 
@@ -72,7 +72,9 @@ function Chat({ token, username, onLogout }: ChatProps) {
       }
     };
 
-    ws.onclose = () => setStatus("disconnected");
+    ws.onclose = (event) => {
+      setStatus(event.code === 4001 ? "kicked" : "disconnected");
+    };
     ws.onerror = () => setStatus("disconnected");
 
     return () => ws.close();
@@ -177,6 +179,7 @@ function Chat({ token, username, onLogout }: ChatProps) {
       <div className={`chat-status status-${status}`} aria-live="polite">
         {status === "connecting" && "Connecting to server..."}
         {status === "disconnected" && "Disconnected — please refresh"}
+        {status === "kicked" && "Signed in from another device — please refresh to reconnect"}
       </div>
 
       <div

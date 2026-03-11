@@ -210,6 +210,7 @@ const wss = new WebSocketServer({
 });
 
 const clients = new Map<WebSocket, ClientInfo>();
+const userSockets = new Map<number, WebSocket>(); // userId -> active socket
 
 function broadcastUserCount() {
   const names = [...new Set(Array.from(clients.values()).map((c) => c.name))];
@@ -224,6 +225,16 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
   const jwtPayload = (req as IncomingMessage & { jwtPayload?: JwtPayload }).jwtPayload;
   const clientId = randomUUID();
   const username = jwtPayload?.username ?? 'Anonymous';
+  const userId = jwtPayload?.userId;
+
+  // Kick existing session for this user
+  if (userId !== undefined) {
+    const existing = userSockets.get(userId);
+    if (existing && existing.readyState === WebSocket.OPEN) {
+      existing.close(4001, 'Signed in from another device');
+    }
+    userSockets.set(userId, ws);
+  }
 
   clients.set(ws, { clientId, name: username });
 
@@ -234,6 +245,9 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
 
   ws.on('close', () => {
     clients.delete(ws);
+    if (userId !== undefined && userSockets.get(userId) === ws) {
+      userSockets.delete(userId);
+    }
     broadcastUserCount();
   });
 
