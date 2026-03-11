@@ -13,6 +13,8 @@ type ConnectionStatus = "connecting" | "connected" | "disconnected";
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:8080";
 
+const TYPING_TIMEOUT_MS = 1500;
+
 function useDebounce(fn: (text: string) => void, delay: number) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -36,10 +38,13 @@ function Chat({ token, username, onLogout }: ChatProps) {
   const [onlineCount, setOnlineCount] = useState(0);
   const [onlineNames, setOnlineNames] = useState<string[]>([]);
   const [showOnlineList, setShowOnlineList] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const onlineListRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
 
   useEffect(() => {
     const ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token)}`);
@@ -59,6 +64,11 @@ function Chat({ token, username, onLogout }: ChatProps) {
       } else if (data.type === "users") {
         setOnlineCount(data.count as number);
         setOnlineNames(data.names as string[]);
+      } else if (data.type === "typing") {
+        const { username: typingUser, isTyping } = data as { username: string; isTyping: boolean };
+        setTypingUsers((prev) =>
+          isTyping ? (prev.includes(typingUser) ? prev : [...prev, typingUser]) : prev.filter((u) => u !== typingUser)
+        );
       }
     };
 
@@ -83,12 +93,36 @@ function Chat({ token, username, onLogout }: ChatProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, [showOnlineList]);
 
+  const sendTyping = useCallback((isTyping: boolean) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: "typing", isTyping }));
+    }
+  }, []);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      sendTyping(true);
+    }
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      isTypingRef.current = false;
+      sendTyping(false);
+    }, TYPING_TIMEOUT_MS);
+  }, [sendTyping]);
+
   const sendMessage = useCallback((text: string) => {
     if (!text.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      sendTyping(false);
+    }
     wsRef.current.send(JSON.stringify({ type: "message", text }));
     setInput("");
     inputRef.current?.focus();
-  }, []);
+  }, [sendTyping]);
 
   const debouncedSend = useDebounce(sendMessage, 300);
   const handleSend = () => debouncedSend(input);
@@ -173,11 +207,22 @@ function Chat({ token, username, onLogout }: ChatProps) {
         <div ref={messagesEndRef} />
       </div>
 
+      {typingUsers.length > 0 && (
+        <div className="typing-indicator" aria-live="polite">
+          <span className="typing-dots"><span/><span/><span/></span>
+          <span className="typing-text">
+            {typingUsers.length === 1
+              ? `${typingUsers[0]} is typing…`
+              : `${typingUsers.slice(0, -1).join(", ")} and ${typingUsers[typingUsers.length - 1]} are typing…`}
+          </span>
+        </div>
+      )}
+
       <div className="chat-input" role="form" aria-label="Send a message">
         <input
           ref={inputRef}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={handleInputChange}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="Type a message..."
           aria-label="Message input"

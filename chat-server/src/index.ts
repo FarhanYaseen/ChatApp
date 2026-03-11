@@ -69,7 +69,12 @@ interface IncomingMessage2 {
   text: string;
 }
 
-type IncomingPayload = IncomingJoin | IncomingMessage2;
+interface IncomingTyping {
+  type: 'typing';
+  isTyping: boolean;
+}
+
+type IncomingPayload = IncomingJoin | IncomingMessage2 | IncomingTyping;
 
 interface InitPayload {
   type: 'init';
@@ -89,6 +94,12 @@ interface UsersPayload {
   type: 'users';
   count: number;
   names: string[];
+}
+
+interface TypingPayload {
+  type: 'typing';
+  username: string;
+  isTyping: boolean;
 }
 
 // ── Express app ───────────────────────────────────────────────────
@@ -251,6 +262,21 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
       clients.forEach((_, client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify(broadcast));
+        }
+      });
+    }
+
+    if (parsed.type === 'typing') {
+      const info = clients.get(ws);
+      const payload: TypingPayload = {
+        type: 'typing',
+        username: info?.name ?? 'Anonymous',
+        isTyping: parsed.isTyping,
+      };
+      const msg = JSON.stringify(payload);
+      clients.forEach((_, client) => {
+        if (client !== ws && client.readyState === WebSocket.OPEN) {
+          client.send(msg);
         }
       });
     }

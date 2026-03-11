@@ -177,3 +177,40 @@
 .auth-switch-btn:hover {
   text-decoration: underline;
 }
+
+/* ── Demo credentials ── */
+.auth-demo {
+  margin-top: 1.25rem;
+  width: 100%;
+  background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+  border: 1px dashed #c7d2fe;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+}
+
+.auth-demo-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--header-from);
+  margin-bottom: 0.4rem;
+}
+
+.auth-demo-creds {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.auth-demo-creds span {
+  font-size: 0.8rem;
+  color: var(--received-text);
+}
+
+.auth-demo-creds strong {
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-right: 0.4rem;
+}

@@ -1,151 +1,186 @@
 # ChatApp
 
-A real-time chat application built with React, TypeScript, and WebSockets. Messages are broadcast instantly to all connected clients, with each user's messages visually distinguished from others.
+A full-stack real-time chat application built with React, TypeScript, Node.js, and WebSockets — featuring JWT authentication, live typing indicators, and online presence.
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-chat--app--lilac--iota.vercel.app-6366f1?style=for-the-badge&logo=vercel)](https://chat-app-lilac-iota.vercel.app/)
+[![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript)](https://typescriptlang.org)
+[![Node.js](https://img.shields.io/badge/Node.js-22-339933?style=flat-square&logo=node.js)](https://nodejs.org)
+
+---
+
+## Live Demo
+
+**URL:** https://chat-app-lilac-iota.vercel.app/
+
+> Open the app in **two different browser tabs or windows** to see real-time messaging in action.
+
+---
+
+## Screenshots
+
+> Add screenshots to a `docs/screenshots/` folder and update the paths below.
+
+| Login Screen | Chat Interface |
+|:---:|:---:|
+| ![Login](docs/screenshots/login.png) | ![Chat](docs/screenshots/chat.png) |
+
+---
+
+## Video Demo
+
+> Record a short screen capture showing login → messaging → typing indicator → online presence and embed or link it here.
+
+[![Watch Demo](https://img.shields.io/badge/Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube)](#)
+
+---
 
 ## Features
 
-- Real-time messaging via WebSocket
-- Live online user count
-- Sent vs. received message distinction (per session)
-- Connection status indicator
-- Debounced send to prevent spam
-- Auto-scroll to latest message
-- Accessible (ARIA roles, live regions)
+- **Real-time messaging** — instant delivery via WebSocket (RFC 6455)
+- **Live typing indicator** — see when others are composing a message
+- **Online presence** — live count and list of connected users
+- **JWT authentication** — register / login with bcrypt-hashed passwords
+- **Session persistence** — token stored in `localStorage`, auto-login on revisit
+- **Sent vs. received** — messages visually distinguished per session
+- **Connection status** — connecting / connected / disconnected banners
+- **Rate limiting** — auth endpoints protected against brute-force
+- **Responsive design** — works on desktop and mobile
+
+---
 
 ## Tech Stack
 
-| Layer    | Technology                          |
-|----------|-------------------------------------|
-| Frontend | React 19, TypeScript, Vite          |
-| Backend  | Node.js, TypeScript, `ws`           |
-| Protocol | WebSocket (RFC 6455)                |
-| Styling  | Plain CSS (no framework)            |
+| Layer      | Technology                                      |
+|------------|-------------------------------------------------|
+| Frontend   | React 19, TypeScript, Vite                      |
+| Backend    | Node.js, Express 5, TypeScript                  |
+| Protocol   | WebSocket (`ws` library, RFC 6455)              |
+| Auth       | JWT (`jsonwebtoken`) + bcrypt (`bcryptjs`)       |
+| Database   | SQLite (`better-sqlite3`)                       |
+| Styling    | Plain CSS (no framework)                        |
+| Deployment | Vercel (frontend) + Railway (backend)           |
+
+---
 
 ## Project Structure
 
 ```
 ChatApp/
-├── chat-client/          # React frontend
+├── chat-client/               # React + Vite frontend
 │   ├── src/
-│   │   ├── Chat/
-│   │   │   ├── index.tsx   # Chat component + WebSocket client logic
-│   │   │   └── index.css   # Component styles
+│   │   ├── Auth/              # Login & register UI
+│   │   ├── Chat/              # Chat UI + WebSocket client
 │   │   ├── App.tsx
-│   │   ├── main.tsx
-│   │   └── index.css       # Global styles
-│   ├── index.html
-│   ├── vite.config.ts
-│   └── package.json
+│   │   └── index.css          # Global styles & CSS variables
+│   ├── vercel.json            # SPA rewrite rules
+│   └── .env.example
 │
-└── chat-server/          # Node.js WebSocket server
+└── chat-server/               # Node.js backend
     ├── src/
-    │   └── index.ts        # WebSocket server
-    ├── tsconfig.json
-    └── package.json
+    │   └── index.ts           # Express + WebSocket server
+    ├── Dockerfile
+    └── .env.example
 ```
 
-## Prerequisites
+---
+
+## WebSocket Message Protocol
+
+All messages are JSON. The server never exposes client IDs to other users.
+
+### Server → Client
+
+| Type      | Payload                                              | When                         |
+|-----------|------------------------------------------------------|------------------------------|
+| `init`    | `{ clientId: string }`                               | On connection                |
+| `message` | `{ id, text, timestamp, senderId, senderName }`      | Broadcast on new message     |
+| `users`   | `{ count: number, names: string[] }`                 | On any connect / disconnect  |
+| `typing`  | `{ username: string, isTyping: boolean }`            | Broadcast to others          |
+
+### Client → Server
+
+| Type      | Payload                          |
+|-----------|----------------------------------|
+| `message` | `{ text: string }`               |
+| `typing`  | `{ isTyping: boolean }`          |
+
+---
+
+## Getting Started
+
+### Prerequisites
 
 - Node.js >= 18
 - npm >= 9
 
-## Getting Started
-
-**1. Install dependencies for both packages:**
+### 1. Clone & install
 
 ```bash
+git clone https://github.com/your-username/ChatApp.git
+cd ChatApp
+
 cd chat-server && npm install
 cd ../chat-client && npm install
 ```
 
-**2. Run the server:**
+### 2. Configure environment
 
 ```bash
-cd chat-server
-npm run dev        # development (hot reload via tsx watch)
+# chat-server/.env
+JWT_SECRET=your-secret-here
+PORT=8080
+NODE_ENV=development
+ALLOWED_ORIGIN=http://localhost:5173
 ```
 
-**3. Run the client (separate terminal):**
+```bash
+# chat-client/.env.local
+VITE_API_URL=http://localhost:8080
+VITE_WS_URL=ws://localhost:8080
+```
+
+### 3. Run
 
 ```bash
-cd chat-client
-npm run dev
+# Terminal 1 — backend
+cd chat-server && npm run dev
+
+# Terminal 2 — frontend
+cd chat-client && npm run dev
 ```
 
 Open `http://localhost:5173`. Open multiple tabs to chat between them.
 
-## Scripts
+---
 
-### chat-server
+## Deployment
 
-| Command         | Description                                |
-|-----------------|--------------------------------------------|
-| `npm run dev`   | Start server with hot reload (`tsx watch`) |
-| `npm run build` | Compile TypeScript to `dist/`              |
-| `npm run start` | Run compiled server (`node dist/index.js`) |
+| Part     | Platform | Notes                                      |
+|----------|----------|--------------------------------------------|
+| Frontend | Vercel   | Root directory: `chat-client`              |
+| Backend  | Railway  | Root directory: `chat-server`, uses Dockerfile |
 
-### chat-client
+### Environment variables to set
 
-| Command           | Description                        |
-|-------------------|------------------------------------|
-| `npm run dev`     | Start Vite dev server              |
-| `npm run build`   | Type-check + production build      |
-| `npm run preview` | Preview production build locally   |
-| `npm run lint`    | Run ESLint                         |
-
-## WebSocket Message Protocol
-
-All messages are JSON. The server never exposes raw client IDs to other users — the client only uses its own `clientId` locally to distinguish sent vs. received.
-
-### Server → Client
-
-| Type      | Payload                                    | When                        |
-|-----------|--------------------------------------------|-----------------------------|
-| `init`    | `{ clientId: string }`                     | On connection               |
-| `message` | `{ id, text, timestamp, senderId }`        | Broadcast on new message    |
-| `users`   | `{ count: number }`                        | On any connect / disconnect |
-
-### Client → Server
-
-| Type      | Payload            |
-|-----------|--------------------|
-| `message` | `{ text: string }` |
-
-## Production Deployment
-
-### Server
-
-```bash
-cd chat-server
-npm run build
-npm run start      # runs dist/index.js on port 8080
+**Vercel (frontend):**
+```
+VITE_API_URL=https://your-backend.railway.app
+VITE_WS_URL=wss://your-backend.railway.app
 ```
 
-Set the `PORT` environment variable to override the default (`8080`).
-
-### Client
-
-```bash
-cd chat-client
-npm run build      # outputs to chat-client/dist/
+**Railway (backend):**
+```
+JWT_SECRET=<long random string>
+NODE_ENV=production
+ALLOWED_ORIGIN=https://your-app.vercel.app
 ```
 
-Serve the `dist/` folder with any static host (Vercel, Netlify, Nginx, etc.).
+---
 
-Update `WS_URL` in `chat-client/src/Chat/index.tsx` to point to your deployed server before building.
+## Author
 
-## Environment
-
-The WebSocket server port defaults to `8080`. To change it:
-
-```bash
-PORT=9000 npm run start
-```
-
-The client WebSocket URL is hardcoded in `chat-client/src/Chat/index.tsx`:
-
-```ts
-const WS_URL = "ws://localhost:8080";
-```
-
-Update this to your production server URL before deploying the client.
+**Farhan Yaseen**
+- Portfolio: [farhanyaseen.netlify.app](https://farhanyaseen.netlify.app/)
+- LinkedIn: [linkedin.com/in/Farhanyaseen](https://linkedin.com/in/Farhanyaseen)
+- Email: farhan.yaseen.se@gmail.com
