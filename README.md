@@ -27,7 +27,7 @@ A full-stack real-time chat application built with React, TypeScript, Node.js, a
 
 ## Video Demo
 
-[![Watch Demo](https://www.loom.com/share/6383040d3cd2439fb824263ac8c7102f)](#)
+[![Watch Demo](https://img.shields.io/badge/Watch%20Demo-Loom-00C4C4?style=for-the-badge&logo=loom)](https://www.loom.com/share/6383040d3cd2439fb824263ac8c7102f)
 
 ---
 
