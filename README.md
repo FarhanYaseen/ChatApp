@@ -18,7 +18,6 @@ A full-stack real-time chat application built with React, TypeScript, Node.js, a
 
 ## Screenshots
 
-> TODO:Add screenshots to a `docs/screenshots/` folder and update the paths below.
 
 | Login Screen | Chat Interface |
 |:---:|:---:|
@@ -28,9 +27,7 @@ A full-stack real-time chat application built with React, TypeScript, Node.js, a
 
 ## Video Demo
 
-> TODO: Record a short screen capture showing login → messaging → typing indicator → online presence and embed or link it here.
-
-[![Watch Demo](https://img.shields.io/badge/Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube)](#)
+[![Watch Demo](https://www.loom.com/share/6383040d3cd2439fb824263ac8c7102f)](#)
 
 ---
 
