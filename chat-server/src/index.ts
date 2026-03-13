@@ -35,11 +35,50 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS reactions (
+    message_id TEXT NOT NULL,
+    username TEXT NOT NULL,
+    emoji TEXT NOT NULL,
+    PRIMARY KEY (message_id, username)
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS messages (
+    id TEXT PRIMARY KEY,
+    room TEXT NOT NULL DEFAULT 'general',
+    text TEXT NOT NULL,
+    sender_id TEXT NOT NULL,
+    sender_name TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 const stmtInsert = db.prepare<[string, string]>(
   'INSERT INTO users (username, password_hash) VALUES (?, ?)'
 );
 const stmtFindByUsername = db.prepare<[string]>(
   'SELECT id, username, password_hash FROM users WHERE username = ?'
+);
+const stmtInsertMessage = db.prepare<[string, string, string, string, string, string]>(
+  'INSERT INTO messages (id, room, text, sender_id, sender_name, timestamp) VALUES (?, ?, ?, ?, ?, ?)'
+);
+const stmtFetchMessages = db.prepare<[string]>(
+  'SELECT id, room, text, sender_id, sender_name, timestamp FROM messages WHERE room = ? ORDER BY created_at DESC LIMIT 50'
+);
+const stmtGetReaction = db.prepare<[string, string]>(
+  'SELECT emoji FROM reactions WHERE message_id = ? AND username = ?'
+);
+const stmtUpsertReaction = db.prepare<[string, string, string]>(
+  'INSERT OR REPLACE INTO reactions (message_id, username, emoji) VALUES (?, ?, ?)'
+);
+const stmtDeleteReaction = db.prepare<[string, string]>(
+  'DELETE FROM reactions WHERE message_id = ? AND username = ?'
+);
+const stmtFetchMessageReactions = db.prepare<[string]>(
+  'SELECT username, emoji FROM reactions WHERE message_id = ?'
 );
 
 // ── Types ─────────────────────────────────────────────────────────
@@ -57,11 +96,12 @@ interface JwtPayload {
 interface ClientInfo {
   clientId: string;
   name: string;
+  room: string;
 }
 
 interface IncomingJoin {
   type: 'join';
-  name: string;
+  room: string;
 }
 
 interface IncomingMessage2 {
@@ -74,7 +114,25 @@ interface IncomingTyping {
   isTyping: boolean;
 }
 
-type IncomingPayload = IncomingJoin | IncomingMessage2 | IncomingTyping;
+interface IncomingReaction {
+  type: 'reaction';
+  messageId: string;
+  emoji: string;
+}
+
+interface ReactionPayload {
+  type: 'reaction';
+  messageId: string;
+  reactions: Record<string, string>;
+}
+
+interface RoomViewersPayload {
+  type: 'room_viewers';
+  room: string;
+  viewers: string[];
+}
+
+type IncomingPayload = IncomingJoin | IncomingMessage2 | IncomingTyping | IncomingReaction;
 
 interface InitPayload {
   type: 'init';
@@ -90,6 +148,11 @@ interface BroadcastPayload {
   senderName: string;
 }
 
+interface HistoryPayload {
+  type: 'history';
+  messages: BroadcastPayload[];
+}
+
 interface UsersPayload {
   type: 'users';
   count: number;
@@ -100,6 +163,34 @@ interface TypingPayload {
   type: 'typing';
   username: string;
   isTyping: boolean;
+}
+
+interface DbMessage {
+  id: string;
+  room: string;
+  text: string;
+  sender_id: string;
+  sender_name: string;
+  timestamp: string;
+}
+
+interface DbReaction {
+  username: string;
+  emoji: string;
+}
+
+function fetchReactionsBulk(messageIds: string[]): Record<string, Record<string, string>> {
+  if (messageIds.length === 0) return {};
+  const placeholders = messageIds.map(() => '?').join(', ');
+  const rows = db.prepare(
+    `SELECT message_id, username, emoji FROM reactions WHERE message_id IN (${placeholders})`
+  ).all(...messageIds) as Array<{ message_id: string; username: string; emoji: string }>;
+  const result: Record<string, Record<string, string>> = {};
+  rows.forEach((r) => {
+    if (!result[r.message_id]) result[r.message_id] = {};
+    result[r.message_id][r.username] = r.emoji;
+  });
+  return result;
 }
 
 // ── Express app ───────────────────────────────────────────────────
@@ -113,6 +204,15 @@ app.use((_req, res, next) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (_req.method === 'OPTIONS') { res.sendStatus(204); return; }
   next();
+});
+
+// GET /health
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    connections: clients.size,
+  });
 });
 
 // Rate limiting for auth endpoints (max 10 requests per 15 minutes per IP)
@@ -203,14 +303,42 @@ const wss = new WebSocketServer({
       const payload = jwt.verify(token, SECRET) as JwtPayload;
       (req as IncomingMessage & { jwtPayload?: JwtPayload }).jwtPayload = payload;
       callback(true);
-    } catch {
-      callback(false, 401, 'Unauthorized');
+    } catch (err) {
+      const isExpired = err instanceof Error && err.name === 'TokenExpiredError';
+      callback(false, isExpired ? 4002 : 401, isExpired ? 'Token expired' : 'Unauthorized');
     }
   },
 });
 
 const clients = new Map<WebSocket, ClientInfo>();
 const userSockets = new Map<number, WebSocket>(); // userId -> active socket
+const clientAlive = new Map<WebSocket, boolean>();
+
+// room -> Set of usernames currently viewing that room
+const roomViewers = new Map<string, Set<string>>();
+
+function getRoomViewers(room: string): string[] {
+  return Array.from(roomViewers.get(room) ?? []);
+}
+
+function addRoomViewer(room: string, username: string) {
+  if (!roomViewers.has(room)) roomViewers.set(room, new Set());
+  roomViewers.get(room)!.add(username);
+}
+
+function removeRoomViewer(room: string, username: string) {
+  roomViewers.get(room)?.delete(username);
+}
+
+function broadcastRoomViewers(room: string) {
+  const viewers = getRoomViewers(room);
+  const payload = JSON.stringify({ type: 'room_viewers', room, viewers });
+  clients.forEach((info, ws) => {
+    if (info.room === room && ws.readyState === WebSocket.OPEN) {
+      ws.send(payload);
+    }
+  });
+}
 
 function broadcastUserCount() {
   const names = [...new Set(Array.from(clients.values()).map((c) => c.name))];
@@ -236,18 +364,48 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     userSockets.set(userId, ws);
   }
 
-  clients.set(ws, { clientId, name: username });
+  clients.set(ws, { clientId, name: username, room: 'general' });
+  clientAlive.set(ws, true);
+
+  addRoomViewer('general', username);
+  broadcastRoomViewers('general');
+
+  // Send message history before the init payload
+  const rawMessages = stmtFetchMessages.all('general') as DbMessage[];
+  const historyMessages: BroadcastPayload[] = rawMessages.reverse().map((m) => ({
+    type: 'message',
+    id: m.id,
+    text: m.text,
+    timestamp: m.timestamp,
+    senderId: m.sender_id,
+    senderName: m.sender_name,
+  }));
+  const historyPayload: HistoryPayload = { type: 'history', messages: historyMessages };
+  ws.send(JSON.stringify(historyPayload));
+
+  const reactionsBulk = fetchReactionsBulk(historyMessages.map((m) => m.id));
+  if (Object.keys(reactionsBulk).length > 0) {
+    ws.send(JSON.stringify({ type: 'reactions_bulk', reactions: reactionsBulk }));
+  }
 
   const init: InitPayload = { type: 'init', clientId };
   ws.send(JSON.stringify(init));
 
   broadcastUserCount();
 
+  ws.on('pong', () => {
+    clientAlive.set(ws, true);
+  });
+
   ws.on('close', () => {
+    const room = clients.get(ws)?.room ?? 'general';
     clients.delete(ws);
+    clientAlive.delete(ws);
     if (userId !== undefined && userSockets.get(userId) === ws) {
       userSockets.delete(userId);
     }
+    removeRoomViewer(room, username);
+    broadcastRoomViewers(room);
     broadcastUserCount();
   });
 
@@ -256,6 +414,37 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     try {
       parsed = JSON.parse(data.toString()) as IncomingPayload;
     } catch {
+      return;
+    }
+
+    if (parsed.type === 'join') {
+      const newRoom = parsed.room;
+      const info = clients.get(ws);
+      const oldRoom = info?.room ?? 'general';
+      if (info) {
+        info.room = newRoom;
+        clients.set(ws, info);
+      }
+      // Update room viewers
+      removeRoomViewer(oldRoom, username);
+      broadcastRoomViewers(oldRoom);
+      addRoomViewer(newRoom, username);
+
+      const roomMessages = stmtFetchMessages.all(newRoom) as DbMessage[];
+      const historyMessages: BroadcastPayload[] = roomMessages.reverse().map((m) => ({
+        type: 'message',
+        id: m.id,
+        text: m.text,
+        timestamp: m.timestamp,
+        senderId: m.sender_id,
+        senderName: m.sender_name,
+      }));
+      const historyPayload: HistoryPayload = { type: 'history', messages: historyMessages };
+      ws.send(JSON.stringify(historyPayload));
+
+      const reactionsBulk = fetchReactionsBulk(historyMessages.map((m) => m.id));
+      ws.send(JSON.stringify({ type: 'reactions_bulk', reactions: reactionsBulk }));
+      broadcastRoomViewers(newRoom);
       return;
     }
 
@@ -273,8 +462,18 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
         senderName: info?.name ?? 'Anonymous',
       };
 
-      clients.forEach((_, client) => {
-        if (client.readyState === WebSocket.OPEN) {
+      // Persist message to DB
+      stmtInsertMessage.run(
+        broadcast.id,
+        info?.room ?? 'general',
+        broadcast.text,
+        broadcast.senderId,
+        broadcast.senderName,
+        broadcast.timestamp
+      );
+
+      clients.forEach((clientInfo, client) => {
+        if (clientInfo.room === (info?.room ?? 'general') && client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify(broadcast));
         }
       });
@@ -288,10 +487,36 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
         isTyping: parsed.isTyping,
       };
       const msg = JSON.stringify(payload);
-      clients.forEach((_, client) => {
-        if (client !== ws && client.readyState === WebSocket.OPEN) {
+      clients.forEach((clientInfo, client) => {
+        if (client !== ws && clientInfo.room === (info?.room ?? 'general') && client.readyState === WebSocket.OPEN) {
           client.send(msg);
         }
+      });
+    }
+
+    if (parsed.type === 'reaction') {
+      const { messageId, emoji } = parsed;
+      const info = clients.get(ws);
+      const uname = info?.name ?? 'Anonymous';
+
+      const existing = stmtGetReaction.get(messageId, uname) as { emoji: string } | undefined;
+      if (existing?.emoji === emoji) {
+        stmtDeleteReaction.run(messageId, uname);
+      } else {
+        stmtUpsertReaction.run(messageId, uname, emoji);
+      }
+
+      const msgReactions = stmtFetchMessageReactions.all(messageId) as DbReaction[];
+      const reactionsMap: Record<string, string> = {};
+      msgReactions.forEach((r) => { reactionsMap[r.username] = r.emoji; });
+
+      const payload: ReactionPayload = {
+        type: 'reaction',
+        messageId,
+        reactions: reactionsMap,
+      };
+      clients.forEach((_, client) => {
+        if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify(payload));
       });
     }
   });
@@ -301,3 +526,15 @@ server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
   console.log(`WebSocket available at ws://localhost:${PORT}`);
 });
+
+// ── WebSocket Heartbeat ───────────────────────────────────────────
+setInterval(() => {
+  clients.forEach((_, ws) => {
+    if (clientAlive.get(ws) === false) {
+      ws.terminate();
+      return;
+    }
+    clientAlive.set(ws, false);
+    ws.ping();
+  });
+}, 30000);
