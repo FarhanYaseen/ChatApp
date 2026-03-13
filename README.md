@@ -155,7 +155,7 @@ All messages are JSON. The server never exposes raw client IDs to other users.
 ### 1. Clone & install
 
 ```bash
-git clone https://github.com/your-username/ChatApp.git
+git clone https://github.com/FarhanYaseen/ChatApp.git
 cd ChatApp
 
 cd chat-server && npm install
