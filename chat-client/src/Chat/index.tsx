@@ -80,6 +80,7 @@ function Chat({ token, username, onLogout }: ChatProps) {
   const isTypingRef = useRef(false);
   const reconnectAttempts = useRef(0);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const manualClose = useRef(false);
 
   const notify = useCallback((title: string, body: string) => {
@@ -92,6 +93,7 @@ function Chat({ token, username, onLogout }: ChatProps) {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      if (disconnectTimer.current) { clearTimeout(disconnectTimer.current); disconnectTimer.current = null; }
       setStatus("connected");
       reconnectAttempts.current = 0;
       inputRef.current?.focus();
@@ -140,7 +142,7 @@ function Chat({ token, username, onLogout }: ChatProps) {
       if (manualClose.current) return;
       if (event.code === 4001) { setTimeout(onLogout, 1500); setStatus("kicked"); return; }
       if (event.code === 4002) { onLogout(); return; } // token expired
-      setStatus("disconnected");
+      disconnectTimer.current = setTimeout(() => setStatus("disconnected"), 2000);
       const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30000);
       reconnectAttempts.current += 1;
       reconnectTimer.current = setTimeout(connect, delay);
@@ -162,6 +164,7 @@ function Chat({ token, username, onLogout }: ChatProps) {
     return () => {
       manualClose.current = true;
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      if (disconnectTimer.current) clearTimeout(disconnectTimer.current);
       wsRef.current?.close();
     };
   }, [connect, token, onLogout]);
