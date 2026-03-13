@@ -247,7 +247,7 @@ function Chat({ token, username, onLogout }: ChatProps) {
           </div>
         </div>
         <div className="chat-header-right">
-          {status === "connected" && (
+          {status === "connected" && onlineCount > 1 && (
             <div className="online-count-wrapper" ref={onlineListRef}>
               <button
                 className="online-count"
