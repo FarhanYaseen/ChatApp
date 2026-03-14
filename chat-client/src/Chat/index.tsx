@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { MessageSquare, LogOut, Send, Users } from "lucide-react";
+import { MessageSquare, LogOut, Send, Users, Sun, Moon } from "lucide-react";
 import "./index.css";
 
 type Message = {
@@ -54,9 +54,11 @@ interface ChatProps {
   token: string;
   username: string;
   onLogout: () => void;
+  dark: boolean;
+  onThemeToggle: () => void;
 }
 
-function Chat({ token, username, onLogout }: ChatProps) {
+function Chat({ token, username, onLogout, dark, onThemeToggle }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [clientId, setClientId] = useState<string | null>(null);
@@ -222,6 +224,7 @@ function Chat({ token, username, onLogout }: ChatProps) {
     setTypingUsers([]);
     setReactions({});
     setRoomViewers([]);
+    setShowScrollBtn(false);
     setRoomActivity(prev => ({ ...prev, [room]: false }));
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'join', room }));
@@ -272,6 +275,9 @@ function Chat({ token, username, onLogout }: ChatProps) {
               )}
             </div>
           )}
+          <button className="logout-btn" onClick={onThemeToggle} aria-label="Toggle dark mode" title="Toggle dark mode">
+            {dark ? <Sun size={16} strokeWidth={2} /> : <Moon size={16} strokeWidth={2} />}
+          </button>
           <button className="logout-btn" onClick={onLogout} aria-label="Sign out" title="Sign out">
             <LogOut size={16} strokeWidth={2} />
           </button>

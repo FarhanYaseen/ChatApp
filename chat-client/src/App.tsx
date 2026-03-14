@@ -42,12 +42,7 @@ function App() {
   }
 
   return (
-    <>
-      <Chat token={token} username={username} onLogout={handleLogout} />
-      <button className="theme-toggle" onClick={() => setDark(d => !d)} aria-label="Toggle dark mode">
-        {dark ? <Sun size={16} /> : <Moon size={16} />}
-      </button>
-    </>
+    <Chat token={token} username={username} onLogout={handleLogout} dark={dark} onThemeToggle={() => setDark(d => !d)} />
   );
 }
 
